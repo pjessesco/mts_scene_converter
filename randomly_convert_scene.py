@@ -4,56 +4,70 @@ import random
 import math
 from datetime import datetime
 
+# ================== User Option ======================
+
+# scene = "living-room"
+scene = "bathroom1"
+# scene = "bathroom2"
+# scene = "bedroom"
+# scene = "classroom"
+# scene = "dining-room"
+# scene = "kitchen1"
+# scene = "kitchen2"
+# scene = "veach"
+
+# Probability that bsdf is randomly converted
+rand_bsdf_prob = 1.0
+
+# How many random scenes generated?
+random_scene_num = 10
+
 # ========== Param of the scene (heuristic) ===========
 
 # bathroom1
-bathroom_center = [-0.25, 1.512405, -0.427584]
-bathroom_shift = 0.01
+if scene == "bathroom1":
+    cam_center = [-0.25, 1.512405, -0.427584]
+    cam_shift = 0.01
 
 # bathroom2 (duck)
-bathroom2_center = [-8.91, 5.93151, 7.54231]
-bathroom2_shift = 0.01
+elif scene == "bathroom2":
+    cam_center = [-8.91, 5.93151, 7.54231]
+    cam_shift = 0.01
 
 # Bedroom
-bedroom_center = [2.05558, 1.21244, 2.29897]
-bedroom_shift = 0.01
+elif scene == "bedroom":
+    cam_center = [2.05558, 1.21244, 2.29897]
+    cam_shift = 0.01
 
 # classroom
-classroom_center = [-0.89049, 1.57158, 2.88653]
-classroom_shift = 0.01
+elif scene == "classroom":
+    cam_center = [-0.89049, 1.57158, 2.88653]
+    cam_shift = 0.01
 
 # dining room
-dining_room_center = [-0.587317, 4.0623, 3.71429]
-dining_room_shift = 0.01
+elif scene == "dining-room":
+    cam_center = [-0.587317, 4.0623, 3.71429]
+    cam_shift = 0.01
 
 # kitchen1
-kitchen_center = [0.7011, 2.00475, 2.25239]
-kitchen_shift = 0.01
-
+elif scene == "kitchen1":
+    cam_center = [0.7011, 2.00475, 2.25239]
+    cam_shift = 0.01
 
 # kitchen2
-kitchen2_center = [94.2855, 150.701, 296.937]
-kitchen2_shift = 7
+elif scene == "kitchen2":
+    cam_center = [94.2855, 150.701, 296.937]
+    cam_shift = 7
 
 # living-room
-grey_white_room_center = [3.40518, 1.231065, -2.31789]
-grey_white_room_shift = 0.01
+elif scene == "living-room":
+    cam_center = [3.40518, 1.231065, -2.31789]
+    cam_shift = 0.01
 
 # veach door
-veach_door_center = [-71.39, 100.49, 145.3]
-veach_door_shift = 7
-
-
-# ================== User Option ======================
-
-# Probability that bsdf is randomly chosen
-rand_bsdf_prob = 0.5
-
-cam_center = bedroom_center
-cam_shift = bedroom_shift
-
-random_scene_num = 10
-
+elif scene == "veach":
+    cam_center = [-71.39, 100.49, 145.3]
+    cam_shift = 7
 
 # =====================================================
 
@@ -118,18 +132,6 @@ def fill_rand_conductor(bsdf):
 if __name__ == '__main__':
 
     random.seed(datetime.now())
-
-    # folder name
-    # scene = "living-room"
-    # scene = "bathroom1"
-    # scene = "bathroom2"
-    # scene = "bedroom"
-    # scene = "classroom"
-    # scene = "dining-room"
-    # scene = "kitchen1"
-    # scene = "kitchen2"
-    scene = "veach"
-
 
     for i in range(random_scene_num):
         tree = parse('C:\\Users\\cglab\\Desktop\\scenes\\'+ scene + '\\scene.xml')
