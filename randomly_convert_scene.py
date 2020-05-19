@@ -188,20 +188,33 @@ if __name__ == '__main__':
 
         for bsdf in bsdfs:
 
-            if random.uniform(0.0, 1.0) > rand_bsdf_prob:
-                continue
-            print("bsdf change")
-
             set_bsdf_id = False
 
+            if random.uniform(0.0, 1.0) > rand_bsdf_prob:
+                continue
 
-            # Clear bsdf xml node except its id
+            ## Parse bsdf, assuming that there are no `id` either bsdf node and its nested bsdf node.
+
+            # Parse bsdf in nested bsdf
+            nested_bsdf = bsdf.find("bsdf")
+            nested_bsdf_id = None
+            if nested_bsdf is not None:
+                if 'id' in nested_bsdf.attrib:
+                    nested_bsdf_id = nested_bsdf.attrib["id"]
+
+            # Store bsdf id
+            if nested_bsdf_id is not None:
+                set_bsdf_id = True
+                bsdf_id = nested_bsdf_id
+
+            # Store nested bsdf id
             if 'id' in bsdf.attrib:
                 set_bsdf_id = True
                 bsdf_id = bsdf.attrib["id"]
 
             bsdf.clear()
 
+            # Set bsdf id to stored one
             if set_bsdf_id:
                 bsdf.set('id', bsdf_id)
 
