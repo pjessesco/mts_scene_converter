@@ -42,8 +42,9 @@ scene_path = os.path.join(scenes_path, scene)
 texture_path = os.path.join(scenes_path, 'textures')
 texture_list = os.listdir(texture_path)
 
-mat_list = ['Ag', 'Al', 'Au', 'Cu', 'Li']
-IOR_list = ['water', 'water ice', 'bk7']
+mat_list = ['a-C', 'Ag', 'Al', 'Au', 'Be', 'Cr', 'CsI', 'Cu', 'K', 'Li', 'MgO', 'Mo', 'W', 'VN', 'TiN', 'VC', 'Te', 'Ta', 'Se']
+IOR_list = ['water', 'acetone', 'ethanol', 'carbon tetrachloride', 'glycerol', 'benzene', 'silicone oil', 'bromine', 'water ice', 'fused quartz', 'pyrex',
+            'acrylic glass', 'polypropylene', 'bk7', 'sodium chloride', 'amber', 'pet', 'diamond']
 
 # ================== Set with user option ======================
 
@@ -114,29 +115,33 @@ def fill_rand_texture(node):
     filename.set('name', 'filename')
     filename.set('value', os.path.join(texture_path,chosen_texture))
     filtertype = ElementTree.SubElement(texture, 'string')
-    filtertype.set('name', 'filtereType')
+    filtertype.set('name', 'filterType')
     filtertype.set('value', 'trilinear')
 
+def choose_rand_bsdf(bsdf, nested=False):
+    if nested:
+        bsdf_list = ['diffuse', 'dielectric', 'conductor', 'roughconductor']
+    else:
+        bsdf_list = ['diffuse', 'dielectric', 'conductor', 'roughconductor', 'coating']
 
-def choose_rand_bsdf(bsdf):
-    bsdf_list = ['diffuse', 'dielectric', 'conductor', 'diffuse_texture']
+
     chosen_bsdf = random.choice(bsdf_list)
 
+    bsdf.set('type', chosen_bsdf)
+
     if chosen_bsdf == 'diffuse':
-        bsdf.set('type', chosen_bsdf)
         fill_rand_diffuse(bsdf)
     elif chosen_bsdf == 'dielectric':
-        bsdf.set('type', chosen_bsdf)
         fill_rand_dielectric(bsdf)
     elif chosen_bsdf == 'conductor':
-        bsdf.set('type', chosen_bsdf)
         fill_rand_conductor(bsdf)
-    elif chosen_bsdf == 'diffuse_texture':
-        bsdf.set('type', 'diffuse')
-        fill_rand_texture(bsdf)
+    elif chosen_bsdf == 'roughconductor':
+        fill_rand_rough_conductor(bsdf)
+    elif chosen_bsdf == 'coating':
+        fill_rand_coating(bsdf)
 
+# albedo, or texture
 def fill_rand_diffuse(bsdf):
-
     diff_list = ['rgb', 'texture']
     diff_mode = random.choice(diff_list)
     if diff_mode == 'rgb':
@@ -150,6 +155,7 @@ def fill_rand_diffuse(bsdf):
     elif diff_mode == 'texture':
         fill_rand_texture(bsdf)
 
+
 def fill_rand_dielectric(bsdf):
     chosen_ext_ior = random.choice(IOR_list)
 
@@ -162,6 +168,7 @@ def fill_rand_dielectric(bsdf):
     extIOR.set("name", "extIOR")
     extIOR.set("value", chosen_ext_ior)
 
+
 def fill_rand_conductor(bsdf):
 
     chosen_mat = random.choice(mat_list)
@@ -169,6 +176,44 @@ def fill_rand_conductor(bsdf):
     material = ElementTree.SubElement(bsdf, 'string')
     material.set("name", "material")
     material.set("value", chosen_mat)
+
+def fill_rand_rough_conductor(bsdf):
+
+    rand_alpha = str(random.uniform(0.001, 0.3))
+
+    chosen_mat = random.choice(mat_list)
+    material = ElementTree.SubElement(bsdf, 'string')
+    material.set("name", "material")
+    material.set("value", chosen_mat)
+    dist = ElementTree.SubElement(bsdf, 'string')
+    dist.set("name", "distribution")
+    dist.set("value", "beckmann")
+    alpha = ElementTree.SubElement(bsdf, 'float')
+    alpha.set("name", "alpha")
+    alpha.set("value", str(rand_alpha))
+
+def fill_rand_coating(bsdf):
+    chosen_IOR = random.choice(IOR_list)
+    nested_bsdf = ElementTree.SubElement(bsdf, 'bsdf')
+    choose_rand_bsdf(nested_bsdf, True)
+    IOR = ElementTree.SubElement(bsdf, 'string')
+    IOR.set('name', 'intIOR')
+    IOR.set('value', chosen_IOR)
+
+# TODO : WIP
+# def fill_mixture_bsdf(bsdf):
+#
+#     w1 = random.uniform(0.0, 1.0)
+#     w2 = 1.0 - w1
+#     weight = ElementTree.SubElement(bsdf, 'string')
+#     weight.set('name', 'weights')
+#     weight.set('value', str(w1)+', '+str(w2))
+#
+#     nested1 = ElementTree.SubElement(bsdf, 'bsdf')
+#     choose_rand_bsdf(nested1, True)
+#     nested2 = ElementTree.SubElement(bsdf, 'bsdf')
+#     choose_rand_bsdf(nested2, True)
+
 
 
 if __name__ == '__main__':
