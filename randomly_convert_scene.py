@@ -4,6 +4,7 @@ import random
 import math
 from datetime import datetime
 import os
+import numpy as np
 
 # ================== User Option ======================
 
@@ -25,16 +26,16 @@ scenes_path = 'C:\\Users\\cglab\\Desktop\\scenes\\'
 # scene = "bedroom"
 # scene = "classroom"
 # scene = "dining-room"
-scene = "kitchen1"
+# scene = "kitchen1"
 # scene = "kitchen2"
-# scene = "living-room"
+scene = "living-room"
 # scene = "veach"
 
 # Probability that bsdf is randomly converted
-rand_bsdf_prob = 1.0
+rand_bsdf_prob = 0.5
 
 # How many random scenes generated?
-random_scene_num = 1
+random_scene_num = 10
 
 # directory that contains scene.xml
 scene_path = os.path.join(scenes_path, scene)
@@ -42,67 +43,52 @@ scene_path = os.path.join(scenes_path, scene)
 texture_path = os.path.join(scenes_path, 'textures')
 texture_list = os.listdir(texture_path)
 
+# Angle of camera view transform in degree
+angle = 30
+
 mat_list = ['a-C', 'Ag', 'Al', 'Au', 'Be', 'Cr', 'CsI', 'Cu', 'K', 'Li', 'MgO', 'Mo', 'W', 'VN', 'TiN', 'VC', 'Te', 'Ta', 'Se']
 IOR_list = ['water', 'acetone', 'ethanol', 'carbon tetrachloride', 'glycerol', 'benzene', 'silicone oil', 'bromine', 'water ice', 'fused quartz', 'pyrex',
             'acrylic glass', 'polypropylene', 'bk7', 'sodium chloride', 'amber', 'pet', 'diamond']
 
-# ================== Set with user option ======================
+# ================== Set camera shift range by scene ======================
 
 # bathroom1
 if scene == "bathroom1":
-    cam_center = [-0.25, 1.512405, -0.427584]
     cam_shift = 0.01
 
 # bathroom2 (duck)
 elif scene == "bathroom2":
-    cam_center = [-8.91, 5.93151, 7.54231]
     cam_shift = 0.01
 
 # Bedroom
 elif scene == "bedroom":
-    cam_center = [2.05558, 1.21244, 2.29897]
     cam_shift = 0.01
 
 # classroom
 elif scene == "classroom":
-    cam_center = [-0.89049, 1.57158, 2.88653]
     cam_shift = 0.01
 
 # dining room
 elif scene == "dining-room":
-    cam_center = [-0.587317, 4.0623, 3.71429]
     cam_shift = 0.01
 
 # kitchen1
 elif scene == "kitchen1":
-    cam_center = [0.7011, 2.00475, 2.25239]
     cam_shift = 0.01
 
 # kitchen2
 elif scene == "kitchen2":
-    cam_center = [94.2855, 150.701, 296.937]
     cam_shift = 7
 
 # living-room
 elif scene == "living-room":
-    cam_center = [3.40518, 1.231065, -2.31789]
     cam_shift = 0.01
 
 # veach door
 elif scene == "veach":
-    cam_center = [-71.39, 100.49, 145.3]
     cam_shift = 7
 
 # =====================================================
-
-
-def get_cam_pos_from_mat(d11, d12, d13, d14,
-                         d21, d22, d23, d24,
-                         d31, d32, d33, d34,
-                         d41, d42, d43, d44):
-
-    return [d14, d24, d34]
-
 
 def fill_rand_texture(node):
 
@@ -214,7 +200,17 @@ def fill_rand_coating(bsdf):
 #     nested2 = ElementTree.SubElement(bsdf, 'bsdf')
 #     choose_rand_bsdf(nested2, True)
 
+def convert_str_to_float(list):
+    return [float(s) for s in list]
 
+def convert_float_to_str(list):
+    return [str(f) for f in list]
+
+def dot(list1, list2):
+    ret = 0
+    for l1, l2 in zip(list1, list2):
+        ret += l1*l2
+    return ret
 
 if __name__ == '__main__':
 
@@ -225,51 +221,67 @@ if __name__ == '__main__':
         root = tree.getroot()
         cam_to_world = root.find("sensor").find("transform")
 
+        # ========================= Convert Camera ============================
+
         # List that contains pos of camera
         cam_pos = None
+        cam_view = None
         cam_target = None
         cam_up = None
 
-        # Parse the position of a camera
+        # Parse the position view vector, and up vector of a camera
         if cam_to_world.find("matrix") is not None:
             cam_mat = (cam_to_world.find("matrix").attrib["value"]).split()
-            cam_pos = [cam_mat[3], cam_mat[7], cam_mat[11]]
+            cam_pos = convert_str_to_float([cam_mat[3], cam_mat[7], cam_mat[11]])
+            cam_view = convert_str_to_float([cam_mat[2], cam_mat[6], cam_mat[10]])
+            cam_up = convert_str_to_float([cam_mat[1], cam_mat[5], cam_mat[9]])
 
         elif cam_to_world.find("lookat") is not None:
-            cam_pos = cam_to_world.find("lookat").attrib["origin"].split(",")
+            cam_pos = np.array(convert_str_to_float(cam_to_world.find("lookat").attrib["origin"].split(",")))
+            cam_view = np.array(convert_str_to_float(cam_to_world.find("lookat").attrib["target"].split(",")))
+            cam_view -= cam_pos
+            cam_up = convert_str_to_float(cam_to_world.find("lookat").attrib["up"].split(","))
 
         else:
             print("no transform exist in sensor")
             exit(-1)
-
-        # original cam position of the scene
-        cam_pos = [float(cam_pos[0]), float(cam_pos[1]), float(cam_pos[2])]
-        # heuristic cam position of the scene
-        cam_pos = cam_center
-
 
         # Randomly shift camera
         cam_pos[0] += random.uniform(-cam_shift, cam_shift)
         cam_pos[1] += random.uniform(-cam_shift, cam_shift)
         cam_pos[2] += random.uniform(-cam_shift, cam_shift)
 
-        # Uniform sample on a sphere
-        theta = 6.2831853*random.uniform(0.0, 1.0)
-        phi = math.acos(1-2*random.uniform(0.0, 1.0))
-        view_x = math.sin(phi)*math.cos(theta)
-        view_y = math.sin(phi)*math.sin(theta)
-        view_z = math.cos(phi)
+        # random sample a point on a unit spherical cap
+        constant = 1.0 / (1.0 - math.cos(math.radians(angle)))
+        theta = math.acos(1 - (random.uniform(0.0, 1.0) / constant))
+        phi = random.uniform(0, 6.2831853)
+        rand_view_vec = np.array([math.sin(theta) * math.cos(phi), math.sin(theta) * math.sin(phi), math.cos(theta)])
+        rand_up_vec = np.array([rand_view_vec[0]*rand_view_vec[2],
+                                rand_view_vec[1]*rand_view_vec[2],
+                                -rand_view_vec[0]*rand_view_vec[0]-rand_view_vec[1]*rand_view_vec[1]])
 
+        # Sample a random view on shifted camera position
+        vx = cam_view[0]
+        vy = cam_view[1]
+        vz = cam_view[2]
 
-        cam_target = [cam_pos[0]+view_x, cam_pos[1]+view_y, cam_pos[2]+view_z]
+        rot_mat = np.array([[vy,       vx*vz, vx],
+                            [-vx,      vy*vz, vy],
+                            [0, -vx*vx-vy*vy, vz]])
+
+        rotated_view = np.matmul(rot_mat, rand_view_vec)
+        rotated_up = np.matmul(rot_mat, rand_up_vec)
+
+        cam_target = rotated_view + cam_pos
 
         cam_to_world.clear()
         cam_to_world.set('name', "toWorld")
         rand_lookat = ElementTree.SubElement(cam_to_world, 'lookat')
         rand_lookat.set("origin", str(cam_pos[0])+","+str(cam_pos[1])+","+str(cam_pos[2]))
         rand_lookat.set("target", str(cam_target[0]) + "," + str(cam_target[1]) + "," + str(cam_target[2]))
-        rand_lookat.set("up", "0,0,1")
+        rand_lookat.set("up", str(rotated_up[0]) + "," + str(rotated_up[1]) + "," + str(rotated_up[2]))
 
+        # ========================= Convert BSDFs ============================
 
         bsdfs = root.findall("bsdf")
 
@@ -308,7 +320,7 @@ if __name__ == '__main__':
 
             choose_rand_bsdf(bsdf)
 
+        os.path.join(scene_path, 'scene.xml')
 
-
-        tree.write('C:\\Users\\cglab\\Desktop\\scenes\\'+ scene + '\\rand_scene'+ str(i)+'.xml')
+        tree.write(scene_path + '\\rand_scene'+ str(i)+'.xml')
 
