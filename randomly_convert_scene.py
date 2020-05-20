@@ -3,26 +3,49 @@ from xml.etree import ElementTree
 import random
 import math
 from datetime import datetime
+import os
 
 # ================== User Option ======================
 
-# scene = "living-room"
-scene = "bathroom1"
+# scene_path -- bathroom1
+#            |- bathroom2
+#            |- bedroom
+#            |- classroom
+#            |- dining-room
+#            |- kitchen1
+#            |- kitchen2
+#            |- living-room
+#            |- veach
+#            |- textures
+
+scenes_path = 'C:\\Users\\cglab\\Desktop\\scenes\\'
+
+# scene = "bathroom1"
 # scene = "bathroom2"
 # scene = "bedroom"
 # scene = "classroom"
 # scene = "dining-room"
-# scene = "kitchen1"
+scene = "kitchen1"
 # scene = "kitchen2"
+# scene = "living-room"
 # scene = "veach"
 
 # Probability that bsdf is randomly converted
 rand_bsdf_prob = 1.0
 
 # How many random scenes generated?
-random_scene_num = 10
+random_scene_num = 1
 
-# ========== Param of the scene (heuristic) ===========
+# directory that contains scene.xml
+scene_path = os.path.join(scenes_path, scene)
+
+texture_path = os.path.join(scenes_path, 'textures')
+texture_list = os.listdir(texture_path)
+
+mat_list = ['Ag', 'Al', 'Au', 'Cu', 'Li']
+IOR_list = ['water', 'water ice', 'bk7']
+
+# ================== Set with user option ======================
 
 # bathroom1
 if scene == "bathroom1":
@@ -80,34 +103,54 @@ def get_cam_pos_from_mat(d11, d12, d13, d14,
     return [d14, d24, d34]
 
 
+def fill_rand_texture(node):
+
+    chosen_texture = random.choice(texture_list)
+
+    texture = ElementTree.SubElement(node, 'texture')
+    texture.set('name', 'diffuseReflectance')
+    texture.set('type', 'bitmap')
+    filename = ElementTree.SubElement(texture, 'string')
+    filename.set('name', 'filename')
+    filename.set('value', os.path.join(texture_path,chosen_texture))
+    filtertype = ElementTree.SubElement(texture, 'string')
+    filtertype.set('name', 'filtereType')
+    filtertype.set('value', 'trilinear')
+
 
 def choose_rand_bsdf(bsdf):
-    bsdf_list = ['diffuse', 'dielectric',  'conductor']
+    bsdf_list = ['diffuse', 'dielectric', 'conductor', 'diffuse_texture']
     chosen_bsdf = random.choice(bsdf_list)
 
-    bsdf.set('type', chosen_bsdf)
-
     if chosen_bsdf == 'diffuse':
+        bsdf.set('type', chosen_bsdf)
         fill_rand_diffuse(bsdf)
-
     elif chosen_bsdf == 'dielectric':
+        bsdf.set('type', chosen_bsdf)
         fill_rand_dielectric(bsdf)
     elif chosen_bsdf == 'conductor':
+        bsdf.set('type', chosen_bsdf)
         fill_rand_conductor(bsdf)
-
+    elif chosen_bsdf == 'diffuse_texture':
+        bsdf.set('type', 'diffuse')
+        fill_rand_texture(bsdf)
 
 def fill_rand_diffuse(bsdf):
-    spectrum = ElementTree.SubElement(bsdf, 'spectrum')
-    spectrum.set("name", "reflectance")
-    rand_r = str(round(random.uniform(0.0, 1.0), 4))
-    rand_g = str(round(random.uniform(0.0, 1.0), 4))
-    rand_b = str(round(random.uniform(0.0, 1.0), 4))
-    spectrum.set("value", str(rand_r)+","+ str(rand_g)+","+ str(rand_b))
 
+    diff_list = ['rgb', 'texture']
+    diff_mode = random.choice(diff_list)
+    if diff_mode == 'rgb':
+        spectrum = ElementTree.SubElement(bsdf, 'spectrum')
+        spectrum.set("name", "reflectance")
+        rand_r = str(round(random.uniform(0.0, 1.0), 4))
+        rand_g = str(round(random.uniform(0.0, 1.0), 4))
+        rand_b = str(round(random.uniform(0.0, 1.0), 4))
+        spectrum.set("value", str(rand_r)+","+ str(rand_g)+","+ str(rand_b))
+
+    elif diff_mode == 'texture':
+        fill_rand_texture(bsdf)
 
 def fill_rand_dielectric(bsdf):
-
-    IOR_list = ['water', 'water ice', 'bk7']
     chosen_ext_ior = random.choice(IOR_list)
 
     intIOR = ElementTree.SubElement(bsdf, 'string')
@@ -121,7 +164,6 @@ def fill_rand_dielectric(bsdf):
 
 def fill_rand_conductor(bsdf):
 
-    mat_list = ['Ag', 'Al', 'Au', 'Cu', 'Li']
     chosen_mat = random.choice(mat_list)
 
     material = ElementTree.SubElement(bsdf, 'string')
@@ -134,7 +176,7 @@ if __name__ == '__main__':
     random.seed(datetime.now())
 
     for i in range(random_scene_num):
-        tree = parse('C:\\Users\\cglab\\Desktop\\scenes\\'+ scene + '\\scene.xml')
+        tree = parse(os.path.join(scene_path, 'scene.xml'))
         root = tree.getroot()
         cam_to_world = root.find("sensor").find("transform")
 
